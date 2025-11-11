@@ -1,4 +1,4 @@
-﻿using DataAccessLayer.DBContext;
+﻿using DataAccessLayer.Models;
 
 namespace BusinessLayer.Interfaces
 {

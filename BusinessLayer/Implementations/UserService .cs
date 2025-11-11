@@ -3,32 +3,33 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Net;
 using System.Net.Mail;
+using DataAccessLayer.Models;
 
 
 namespace BusinessLayer.Implementations
 {
     public class UserService : IUserService
     {
-        private readonly DataAccessLayer.DBContext.HRMSContext _context;
+        private readonly HRMSContext _context;
         private readonly IConfiguration _configuration;
 
-        public UserService(DataAccessLayer.DBContext.HRMSContext context, IConfiguration configuration)
+        public UserService(HRMSContext context, IConfiguration configuration)
         {
             _context = context;
             _configuration = configuration;
         }
 
-        public async Task<IEnumerable<DataAccessLayer.DBContext.User>> GetAllUsersAsync()
+        public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
             return await _context.Users.ToListAsync();
         }
 
-        public async Task<DataAccessLayer.DBContext.User?> GetUserByIdAsync(int id)
+        public async Task<User?> GetUserByIdAsync(int id)
         {
             return await _context.Users.FindAsync(id);
         }
 
-        public async Task<DataAccessLayer.DBContext.User> CreateUserAsync(DataAccessLayer.DBContext.User user)
+        public async Task<User> CreateUserAsync(User user)
         {
             user.CreatedDate = DateTime.UtcNow;
             _context.Users.Add(user);
@@ -40,7 +41,7 @@ namespace BusinessLayer.Implementations
             return user;
         }
 
-        public async Task<DataAccessLayer.DBContext.User?> UpdateUserAsync(int id, DataAccessLayer.DBContext.User updatedUser)
+        public async Task<User?> UpdateUserAsync(int id, User updatedUser)
         {
             var existingUser = await _context.Users.FindAsync(id);
             if (existingUser == null) return null;
@@ -64,7 +65,7 @@ namespace BusinessLayer.Implementations
             return true;
         }
 
-        private async Task SendWelcomeEmailAsync(DataAccessLayer.DBContext.User user)
+        private async Task SendWelcomeEmailAsync(User user)
         {
             try
             {

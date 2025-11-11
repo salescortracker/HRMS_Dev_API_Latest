@@ -17,6 +17,8 @@ public partial class HRMSContext : DbContext
 
     public virtual DbSet<Company> Companies { get; set; }
 
+    public virtual DbSet<DocumentType> DocumentTypes { get; set; }
+
     public virtual DbSet<MenuMaster> MenuMasters { get; set; }
 
     public virtual DbSet<MenuRoleMaster> MenuRoleMasters { get; set; }
@@ -29,17 +31,17 @@ public partial class HRMSContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=localhost;Database=HRMS;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True");
+        => optionsBuilder.UseSqlServer("Data Source=DESKTOP-I445813;Initial Catalog=HRMS_DB;User Id=sa;Password=Password@123;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Company>(entity =>
         {
-            entity.HasKey(e => e.CompanyId).HasName("PK__Company__2D971C4CF62B9876");
+            entity.HasKey(e => e.CompanyId).HasName("PK__Company__2D971C4C974EDCEC");
 
             entity.ToTable("Company", "UM");
 
-            entity.HasIndex(e => e.CompanyCode, "UQ__Company__11A0134BA759E02B").IsUnique();
+            entity.HasIndex(e => e.CompanyCode, "UQ__Company__11A0134B951640C5").IsUnique();
 
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
             entity.Property(e => e.CompanyCode)
@@ -61,9 +63,23 @@ public partial class HRMSContext : DbContext
             entity.Property(e => e.ModifiedAt).HasColumnType("datetime");
         });
 
+        modelBuilder.Entity<DocumentType>(entity =>
+        {
+            entity.HasKey(e => e.DocumentTypeId).HasName("PK__Document__DBA390C194ACA35F");
+
+            entity.ToTable("DocumentType", "UM");
+
+            entity.Property(e => e.DocumentTypeId).HasColumnName("DocumentTypeID");
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime");
+            entity.Property(e => e.DocumentTypeName)
+                .HasMaxLength(150)
+                .IsUnicode(false);
+            entity.Property(e => e.ModifiedAt).HasColumnType("datetime");
+        });
+
         modelBuilder.Entity<MenuMaster>(entity =>
         {
-            entity.HasKey(e => e.MenuId).HasName("PK__MenuMast__C99ED2507761B4BD");
+            entity.HasKey(e => e.MenuId).HasName("PK__MenuMast__C99ED250D3547D77");
 
             entity.ToTable("MenuMaster", "UM");
 
@@ -81,7 +97,7 @@ public partial class HRMSContext : DbContext
 
         modelBuilder.Entity<MenuRoleMaster>(entity =>
         {
-            entity.HasKey(e => e.MenuRoleId).HasName("PK__MenuRole__880F2CC1D6DB593A");
+            entity.HasKey(e => e.MenuRoleId).HasName("PK__MenuRole__880F2CC1AF10B706");
 
             entity.ToTable("MenuRoleMaster", "UM");
 
@@ -116,7 +132,7 @@ public partial class HRMSContext : DbContext
 
         modelBuilder.Entity<Region>(entity =>
         {
-            entity.HasKey(e => e.RegionId).HasName("PK__Region__ACD844438DB12196");
+            entity.HasKey(e => e.RegionId).HasName("PK__Region__ACD84443247AD8F3");
 
             entity.ToTable("Region", "UM");
 
@@ -136,12 +152,12 @@ public partial class HRMSContext : DbContext
             entity.HasOne(d => d.Company).WithMany(p => p.Regions)
                 .HasForeignKey(d => d.CompanyId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Region__Modified__4F7CD00D");
+                .HasConstraintName("FK__Region__CompanyI__5BE2A6F2");
         });
 
         modelBuilder.Entity<RoleMaster>(entity =>
         {
-            entity.HasKey(e => e.RoleId).HasName("PK__RoleMast__8AFACE3AE0B6E87D");
+            entity.HasKey(e => e.RoleId).HasName("PK__RoleMast__8AFACE3A67ACBC57");
 
             entity.ToTable("RoleMaster", "UM");
 

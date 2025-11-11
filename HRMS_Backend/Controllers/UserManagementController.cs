@@ -1,7 +1,10 @@
 ﻿using BusinessLayer.DTOs;
 using BusinessLayer.Interfaces;
-using DataAccessLayer.DBContext;
+using DataAccessLayer.Models;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
+using System.Net;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace HRMS_Backend.Controllers
 {
@@ -15,8 +18,9 @@ namespace HRMS_Backend.Controllers
         private readonly IMenuMasterService _menuService;
         private readonly IRoleMasterService _roleService;
         private readonly IMenuRoleService _menuRoleService;
+        private readonly IDocumentTypeService _documentTypeService;
         public UserManagementController(ICompanyService companyService, IRegionService regionService, IUserService userService
-            , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService)
+            , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService, IDocumentTypeService documentTypeService)
         {
             _companyService = companyService;
             _regionService = regionService;
@@ -24,6 +28,7 @@ namespace HRMS_Backend.Controllers
             _menuService = menuService;
             _roleService = roleService;
             _menuRoleService = menuRoleService;
+            _documentTypeService = documentTypeService;
         }
         #region Company Details
         /// <summary>
@@ -460,6 +465,232 @@ namespace HRMS_Backend.Controllers
         }
         #endregion
 
-       
-    }
+        #region DocumentType
+        /// <summary>
+        /// Retrieves a list of all documentTypes.
+        /// </summary>
+        /// <remarks>This method performs an asynchronous operation to fetch all documentTypes from the data
+        /// source.</remarks>
+        /// <returns>An <see cref="IActionResult"/> containing a collection of documentTypes.  Returns an HTTP 200 status code with
+        /// the list of documentTypes if successful.</returns>
+        [HttpGet]
+        [Route("GetDocumentType")]
+        public async Task<IActionResult> GetAllDocumentTypes()
+        {
+            try
+            {
+                var documentTypes = await _documentTypeService.GetAllDocumentTypeAsync();
+                Log.Information("Fetched all DocumentType successfully from controller.");
+                return Ok(documentTypes);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error fetching all DocumentTypes in controller.");
+                return StatusCode(500, "Internal server error");
+            }
+            
+            
+        }
+        /// <summary>
+        /// Retrieves a documnetType by its unique identifier.
+        /// </summary>
+        /// <remarks>This method performs an asynchronous operation to fetch the DocumentType details. Ensure
+        /// the <paramref name="id"/> corresponds to a valid documentType record.</remarks>
+        /// <param name="id">The unique identifier of the documentType to retrieve.</param>
+        /// <returns>An <see cref="IActionResult"/> containing the documentType data if found; otherwise, a <see
+        /// cref="NotFoundResult"/> if the documentType does not exist.</returns>
+        [HttpGet]
+        [Route("GetDocumentTypeById")]
+        public async Task<IActionResult> GetDocumentTypeById(int id)
+        {
+            try
+            {
+                var log = await _documentTypeService.GetDocumentTypeByIdAsync(id);
+                if (log == null)
+                {
+                    Log.Warning("DocumentType with Id {Id} not found in controller.", id);
+                    return NotFound($"DocumentType with Id {id} not found.");
+                }
+                Log.Information("Fetched DocumentType with Id {Id} from controller.", id);
+                return Ok(log);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error fetching DocumentType with Id {Id} in controller.", id);
+                return StatusCode(500, "Internal server error");
+            }
+            
+        }
+        /// <summary>
+        /// Searches for companies based on the specified filter criteria.
+        /// </summary>
+        /// <remarks>The filter object must be structured according to the requirements of the underlying
+        /// search service. Ensure that the filter contains valid criteria to avoid unexpected results.</remarks>
+        /// <param name="filter">An object containing the filter criteria for the search. The structure and fields of the filter object
+        /// depend on the implementation of the search service.</param>
+        /// <returns>An <see cref="IActionResult"/> containing the search results. The result is a collection of companies that
+        /// match the specified filter criteria.</returns>
+        [HttpPost]
+        [Route("GetdocumentTypeSearch")]
+        public async Task<IActionResult> Search([FromQuery] string? documentTypeName, [FromQuery] bool? IsActive)
+        {
+            try
+            {
+                Log.Information("Received search request for DocumentType");
+
+                var results = await _documentTypeService.SearchDocumentTypeAsync(
+                   documentTypeName, IsActive
+
+                );
+
+                if (results == null || !results.Any())
+                    return NotFound(new { Message = "No  DocumentType found for the specified filters." });
+
+                return Ok(results);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error while searching DocumentType");
+                return StatusCode(500, new { Message = "An error occurred while searching DocumentTypes." });
+            }
+            
+        }
+        /// <summary>
+        /// Creates a new documentType and returns the created resource with its location.
+        /// </summary>
+        /// <remarks>This method uses the HTTP POST verb to create a new documentType. The created resource's
+        /// URI is included in the response.</remarks>
+        /// <param name="dto">The data transfer object containing the details of the documentType to create.</param>
+        /// <returns>A <see cref="CreatedAtActionResult"/> containing the details of the created documentType and the URI of the
+        /// resource.</returns>
+        [HttpPost]
+        [Route("SavedocumentType")]
+        public async Task<IActionResult> CreateDocumentType([FromBody] CreateDocumentTypeDto dto, [FromQuery] int createdby)
+        {
+            try
+            {
+                var created = await _documentTypeService.CreateDocumentTypeAsync(dto,createdby);
+                var DocumentTypeId = created.Data.DocumentTypeId; // Accessing the Id from the ResponseDto
+                var status = created.Status;
+                var data = created.Data;
+
+                if (status == "created")
+                {
+                    Log.Information("Created new DocumentType with Id {Id} in controller.", data.DocumentTypeId);
+                    return CreatedAtAction(nameof(GetById), new { id = data.DocumentTypeId }, created);
+                }
+
+                if (status == "duplicate")
+                {
+                    Log.Warning("Duplicate DocumentType detected for DocumentTypeName: {DocumentTypeName}.", data.DocumentTypeName);
+                    return Conflict(created); // HTTP 409 for duplicates
+                }
+
+                // Optional: handle unexpected status
+                Log.Error("Unexpected status '{Status}' returned from CreateAsync.", status);
+                return StatusCode(500, new { message = "Unexpected response from service." });
+
+
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error creating  DocumentType in controller.");
+                return StatusCode(500, "Internal server error");
+            }
+            
+            
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost("UpdatedocumentType/{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateDocumentTypeDto dto,int modifiedby)
+        {
+            try
+            {
+                var updated = await _documentTypeService.UpdateDocumentTypeAsync(id,dto, modifiedby);
+                Log.Information("Updated DocumentType with Id {Id} in controller.", dto.DocumentTypeId);
+                return Ok(updated);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error updating DocumentType with Id {Id} in controller.", dto.DocumentTypeId);
+                return StatusCode(500, "Internal server error");
+            }
+            
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        /// 
+        [HttpDelete("DeletedocumentType/{id}")]
+
+        public async Task<IActionResult> DeleteDocumentType(int id)
+        {
+
+            try
+            {
+                var deleted = await _documentTypeService.DeleteDocumentTypeAsync(id);
+                if (!deleted)
+                {
+                    Log.Warning("DocumentType with Id {Id} not found for deletion in controller.", id);
+                    return NotFound($"DocumentType with Id {id} not found for deletion.");
+                    
+                }
+
+                Log.Information("Deleted DocumentType with Id {Id} in controller.", id);
+                return Ok($"DocumentType with Id {id} deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error deleting DocumentType with Id {Id} in controller.", id);
+                return StatusCode(500, "Internal server error");
+            }
+            
+        }
+
+        /// <summary>
+        /// Bulk upload Document types from Excel
+        /// </summary>
+        /// <param name="request">Form data containing the Excel file</param>
+        /// <param name="createdBy">User ID performing the upload</param>
+        [HttpPost("BulkUpload")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> BulkUpload([FromForm] BulkUploadRequest request, int createdBy)
+        {
+            if (request.File == null || request.File.Length == 0)
+                return BadRequest("No file uploaded.");
+
+
+            try
+            {
+                (int insertedCount, int updatedCount)? result = await _documentTypeService.BulkUploadAsync(request.File, createdBy);
+                if (result == null)
+                {
+                    Log.Warning("File {File} not found for bulk upload.", request.File.FileName);
+                    return NotFound("File not found or empty.");
+                }
+
+                Log.Information("Bulk upload completed in controller.");
+                return Ok(new
+                {
+                    Message = "Bulk upload completed successfully.",
+                    Inserted = result.Value.insertedCount,
+                    Updated = result.Value.updatedCount
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during bulk upload with file {File}.", request.File.FileName);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+            #endregion
+
+        }
 }

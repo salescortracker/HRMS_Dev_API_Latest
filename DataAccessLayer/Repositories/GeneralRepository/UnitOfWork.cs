@@ -1,4 +1,4 @@
-﻿using DataAccessLayer.DBContext;
+﻿using DataAccessLayer.Models;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DataAccessLayer.Repositories.GeneralRepository

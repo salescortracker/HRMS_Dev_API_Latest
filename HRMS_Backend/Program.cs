@@ -1,6 +1,6 @@
 ﻿using BusinessLayer.Implementations;
 using BusinessLayer.Interfaces;
-using DataAccessLayer.DBContext;
+using DataAccessLayer.Models;
 using DataAccessLayer.Repositories.GeneralRepository;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +31,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMenuMasterService, MenuMasterService>();
 builder.Services.AddScoped<IRoleMasterService, RoleMasterService>();
 builder.Services.AddScoped<IMenuRoleService, MenuRoleService>();
+builder.Services.AddScoped<IDocumentTypeService, DocumentTypeService>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

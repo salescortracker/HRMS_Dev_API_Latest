@@ -1,6 +1,6 @@
 ﻿using BusinessLayer.DTOs;
 using BusinessLayer.Interfaces;
-using DataAccessLayer.DBContext;
+using DataAccessLayer.Models;
 using DataAccessLayer.Repositories.GeneralRepository;
 
 namespace BusinessLayer.Implementations

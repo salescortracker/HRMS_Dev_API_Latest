@@ -1,6 +1,6 @@
 ﻿using BusinessLayer.DTOs;
 using BusinessLayer.Interfaces;
-using DataAccessLayer.DBContext;
+using DataAccessLayer.Models;
 using DataAccessLayer.Repositories.GeneralRepository;
 using System;
 using System.Collections.Generic;
