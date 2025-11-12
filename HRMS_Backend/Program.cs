@@ -31,6 +31,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMenuMasterService, MenuMasterService>();
 builder.Services.AddScoped<IRoleMasterService, RoleMasterService>();
 builder.Services.AddScoped<IMenuRoleService, MenuRoleService>();
+builder.Services.AddScoped<IEmployeeEducationService, EmployeeEducationService>();
+builder.Services.AddScoped<IEmployeeCertificationService, EmployeeCertificationService>();
+builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -49,9 +52,11 @@ if (app.Environment.IsDevelopment())
 // --------------------
 app.UseCors(corsPolicyName);
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
