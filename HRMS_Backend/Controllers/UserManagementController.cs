@@ -1,5 +1,6 @@
-﻿using BusinessLayer.DTOs;
-using BusinessLayer.Implementations;
+﻿using System.Net.Mail;
+using System.Net;
+using BusinessLayer.DTOs;
 using BusinessLayer.Interfaces;
 using DataAccessLayer.DBContext;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,17 @@ namespace HRMS_Backend.Controllers
         private readonly IMenuRoleService _menuRoleService;
 
         private readonly IEmployeeReferenceService _employeeReferenceService;
+
+        private readonly IEmployeeFormService _employeeFormService;
+        private readonly IWebHostEnvironment _env;
+       
+
+
+
+        public UserManagementController(ICompanyService companyService, IRegionService regionService, IUserService userService
+            , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService, IEmployeeReferenceService employeeReferenceService
+            , IEmployeeFormService employeeFormService, IWebHostEnvironment env)
+
     
         private readonly IEmployeeEducationService _employeeEducationService;
         private readonly IEmployeeCertificationService _employeeCertificationService;
@@ -26,6 +38,7 @@ namespace HRMS_Backend.Controllers
 
         public UserManagementController(ICompanyService companyService, IRegionService regionService, IUserService userService
             , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService, IEmployeeEducationService employeeEducationService, IEmployeeCertificationService employeeCertificationService, IEmployeeDocumentService employeeDocumentService, IWebHostEnvironment env,IEmployeeReferenceService employeeReferenceService)
+
 
         {
             _companyService = companyService;
@@ -37,11 +50,17 @@ namespace HRMS_Backend.Controllers
 
             _employeeReferenceService = employeeReferenceService;
 
+            _employeeFormService = employeeFormService;
+            _env = env;
+            _leaveTypeService = leaveTypeService;
+
+
             _employeeEducationService = employeeEducationService;
 
             _employeeCertificationService = employeeCertificationService;
             _employeeDocumentService = employeeDocumentService;
             _env = env;
+
 
 
         }
@@ -568,6 +587,108 @@ namespace HRMS_Backend.Controllers
 
         #endregion
 
+        #region EmployeeForms
+        [HttpGet("GetAllForms")]
+        public async Task<IActionResult> GetAllForms()
+        {
+            var result = await _employeeFormService.GetAllFormsAsync();
+
+            return Ok(result);
+        }
+
+        [HttpGet("GetFormById/{id}")]
+        public async Task<IActionResult> GetFormById(int id)
+        {
+            var result = await _employeeFormService.GetFormByIdAsync(id);
+            if (result == null)
+                return NotFound(new { message = "Form not found" });
+
+            return Ok(result);
+        }
+
+        // ✅ Add (with file upload)
+        [HttpPost("AddForm")]
+        public async Task<IActionResult> AddFormAsync([FromForm] EmployeeFormDto dto)
+        {
+            if (dto == null)
+                return BadRequest(new { message = "Invalid data" });
+
+            string webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            string uploadFolder = Path.Combine(webRootPath, "Uploads", "EmployeeForms");
+            if (!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            if (dto.DocumentFile != null && dto.DocumentFile.Length > 0)
+            {
+                string fileName = $"{Guid.NewGuid()}_{dto.DocumentFile.FileName}";
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await dto.DocumentFile.CopyToAsync(stream);
+                }
+
+                dto.FilePath = Path.Combine("Uploads", "EmployeeForms", fileName).Replace("\\", "/");
+                dto.FileName = dto.DocumentFile.FileName;
+            }
+
+            dto.CreatedBy ??= 0;
+            var newId = await _employeeFormService.AddFormAsync(dto);
+            return Ok(new { message = "Document added successfully", id = newId });
+        }
+
+        // ✅ Update
+        [HttpPut("UpdateForm/{id}")]
+        public async Task<IActionResult> UpdateFormAsync(int id, [FromForm] EmployeeFormDto dto)
+        {
+            dto.Id = id;
+
+            if (dto.DocumentFile != null && dto.DocumentFile.Length > 0)
+            {
+                string uploadFolder = Path.Combine(_env.WebRootPath, "Uploads", "EmployeeForms");
+                if (!Directory.Exists(uploadFolder))
+                    Directory.CreateDirectory(uploadFolder);
+
+                string fileName = $"{Guid.NewGuid()}_{dto.DocumentFile.FileName}";
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await dto.DocumentFile.CopyToAsync(stream);
+                }
+
+                dto.FilePath = Path.Combine("Uploads", "EmployeeForms", fileName).Replace("\\", "/");
+                dto.FileName = dto.DocumentFile.FileName;
+            }
+
+            dto.ModifiedBy ??= 0;
+
+            var success = await _employeeFormService.UpdateFormAsync(dto);
+            if (!success)
+                return NotFound(new { message = "Document not found" });
+
+            return Ok(new { message = "Document updated successfully" });
+        }
+
+        [HttpDelete("DeleteForm/{id}")]
+        public async Task<IActionResult> DeleteForm(int id)
+        {
+            var success = await _employeeFormService.DeleteFormAsync(id);
+            if (!success)
+                return NotFound(new { message = "Document not found" });
+
+            return Ok(new { message = "Document deleted successfully" });
+        }
+
+        [HttpGet("GetActiveDocumentTypes")]
+        public async Task<IActionResult> GetActiveDocumentTypes()
+        {
+            var result = await _employeeFormService.GetActiveDocumentTypesAsync();
+            return Ok(result);
+        }
+        #endregion
+
+       
 
 
 

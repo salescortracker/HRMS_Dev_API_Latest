@@ -1,8 +1,9 @@
-﻿using BusinessLayer.Implementations;
+using BusinessLayer.Implementations;
 using BusinessLayer.Interfaces;
 using DataAccessLayer.DBContext;
 using DataAccessLayer.Repositories.GeneralRepository;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<HRMSContext>(options =>
@@ -34,9 +35,13 @@ builder.Services.AddScoped<IMenuRoleService, MenuRoleService>();
 
 builder.Services.AddScoped<IEmployeeReferenceService, EmployeeReferenceService>();
 
+builder.Services.AddScoped<IEmployeeFormService, EmployeeFormService>();
+builder.Services.AddScoped<ILeaveTypeService, LeaveTypeService>();
+
 builder.Services.AddScoped<IEmployeeEducationService, EmployeeEducationService>();
 builder.Services.AddScoped<IEmployeeCertificationService, EmployeeCertificationService>();
 builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -59,6 +64,20 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseAuthorization();
+
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+
+app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/Uploads"
+});
+
 
 app.MapControllers();
 
