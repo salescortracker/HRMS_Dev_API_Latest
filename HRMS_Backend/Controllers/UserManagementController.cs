@@ -16,13 +16,17 @@ namespace HRMS_Backend.Controllers
         private readonly IMenuMasterService _menuService;
         private readonly IRoleMasterService _roleService;
         private readonly IMenuRoleService _menuRoleService;
+
+        private readonly IEmployeeReferenceService _employeeReferenceService;
+    
         private readonly IEmployeeEducationService _employeeEducationService;
         private readonly IEmployeeCertificationService _employeeCertificationService;
         private readonly IEmployeeDocumentService _employeeDocumentService;
         private readonly IWebHostEnvironment _env;
 
         public UserManagementController(ICompanyService companyService, IRegionService regionService, IUserService userService
-            , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService, IEmployeeEducationService employeeEducationService, IEmployeeCertificationService employeeCertificationService, IEmployeeDocumentService employeeDocumentService, IWebHostEnvironment env)
+            , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService, IEmployeeEducationService employeeEducationService, IEmployeeCertificationService employeeCertificationService, IEmployeeDocumentService employeeDocumentService, IWebHostEnvironment env,IEmployeeReferenceService employeeReferenceService)
+
         {
             _companyService = companyService;
             _regionService = regionService;
@@ -30,11 +34,15 @@ namespace HRMS_Backend.Controllers
             _menuService = menuService;
             _roleService = roleService;
             _menuRoleService = menuRoleService;
+
+            _employeeReferenceService = employeeReferenceService;
+
             _employeeEducationService = employeeEducationService;
 
             _employeeCertificationService = employeeCertificationService;
             _employeeDocumentService = employeeDocumentService;
             _env = env;
+
 
         }
         #region Company Details
@@ -471,6 +479,97 @@ namespace HRMS_Backend.Controllers
             return Ok(result);
         }
         #endregion
+        
+        #region Employee Reference Details
+
+        /// <summary>
+        /// Retrieves all employee references.
+        /// </summary>
+        /// <returns>A list of employee reference records.</returns>
+        [HttpGet]
+        [Route("GetAllEmployeeReferences")]
+        public async Task<IActionResult> GetAllEmployeeReferences()
+        {
+            var references = await _employeeReferenceService.GetAllEmployeeReferencesAsync();
+            return Ok(references);
+        }
+
+        /// <summary>
+        /// Retrieves an employee reference by ID.
+        /// </summary>
+        /// <param name="id">The unique ID of the employee reference.</param>
+        /// <returns>The employee reference details.</returns>
+        [HttpGet]
+        [Route("GetEmployeeReferenceById/{id:int}")]
+        public async Task<IActionResult> GetEmployeeReferenceById(int id)
+        {
+            var reference = await _employeeReferenceService.GetEmployeeReferenceByIdAsync(id);
+            if (reference == null)
+                return NotFound(new { message = "Employee Reference not found" });
+
+            return Ok(reference);
+        }
+
+        /// <summary>
+        /// Creates a new employee reference record.
+        /// </summary>
+        /// <param name="dto">The employee reference data transfer object.</param>
+        /// <returns>The created employee reference.</returns>
+        [HttpPost]
+        [Route("CreateEmployeeReference")]
+        public async Task<IActionResult> CreateEmployeeReference([FromBody] EmployeeReferenceDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var created = await _employeeReferenceService.AddEmployeeReferenceAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = created.ReferenceId }, created);
+        }
+
+        /// <summary>
+        /// Updates an existing employee reference record.
+        /// </summary>
+        /// <param name="id">The ID of the record to update.</param>
+        /// <param name="dto">The updated data.</param>
+        /// <returns>The updated employee reference.</returns>
+        [HttpPost]
+        [Route("UpdateEmployeeReference/{id:int}")]
+        public async Task<IActionResult> UpdateEmployeeReference(int id, [FromBody] EmployeeReferenceDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var updated = await _employeeReferenceService.UpdateEmployeeReferenceAsync(id, dto);
+                return Ok(updated);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Deletes an employee reference by ID.
+        /// </summary>
+        /// <param name="id">The unique ID of the employee reference.</param>
+        /// <returns>No content if deleted successfully.</returns>
+        [HttpDelete]
+        [Route("DeleteEmployeeReference/{id:int}")]
+        public async Task<IActionResult> DeleteEmployeeReference(int id)
+        {
+            var deleted = await _employeeReferenceService.DeleteEmployeeReferenceAsync(id);
+            if (!deleted)
+                return NotFound(new { message = "Employee Reference not found" });
+
+            return NoContent();
+        }
+
+        #endregion
+
+
+
 
         #region Employee Education
 
@@ -881,5 +980,6 @@ namespace HRMS_Backend.Controllers
         }
 
         #endregion
+
     }
 }
