@@ -31,6 +31,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMenuMasterService, MenuMasterService>();
 builder.Services.AddScoped<IRoleMasterService, RoleMasterService>();
 builder.Services.AddScoped<IMenuRoleService, MenuRoleService>();
+builder.Services.AddScoped< IEmployeeFamilyService, EmployeeFamilyService>();
+builder.Services.AddScoped<IEmployeeEmergencyContactService, EmployeeEmergencyContactService>();
+builder.Services.AddScoped<IEmployeeImmigrationService, EmployeeImmigrationService>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

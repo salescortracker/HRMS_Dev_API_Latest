@@ -1,4 +1,5 @@
 ﻿using BusinessLayer.DTOs;
+using BusinessLayer.Implementations;
 using BusinessLayer.Interfaces;
 using DataAccessLayer.DBContext;
 using Microsoft.AspNetCore.Mvc;
@@ -15,8 +16,11 @@ namespace HRMS_Backend.Controllers
         private readonly IMenuMasterService _menuService;
         private readonly IRoleMasterService _roleService;
         private readonly IMenuRoleService _menuRoleService;
+        private readonly IEmployeeFamilyService _employeeFamilyService;
+        private readonly IEmployeeEmergencyContactService _emergencyContactService;
+        private readonly IEmployeeImmigrationService _employeeImmigrationService;
         public UserManagementController(ICompanyService companyService, IRegionService regionService, IUserService userService
-            , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService)
+            , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService, IEmployeeFamilyService employeeFamilyService, IEmployeeEmergencyContactService emergencyContactService, IEmployeeImmigrationService employeeImmigrationService)
         {
             _companyService = companyService;
             _regionService = regionService;
@@ -24,6 +28,9 @@ namespace HRMS_Backend.Controllers
             _menuService = menuService;
             _roleService = roleService;
             _menuRoleService = menuRoleService;
+            _employeeFamilyService = employeeFamilyService;
+            _emergencyContactService = emergencyContactService;
+            _employeeImmigrationService = employeeImmigrationService;
         }
         #region Company Details
         /// <summary>
@@ -460,6 +467,264 @@ namespace HRMS_Backend.Controllers
         }
         #endregion
 
-       
+        #region Employee Family Details
+
+        /// <summary>
+        /// Retrieves a list of all employee family details.
+        /// </summary>
+        /// <remarks>
+        /// This method performs an asynchronous operation to fetch all employee family details
+        /// from the data source.
+        /// </remarks>
+        /// <returns>
+        /// An <see cref="IActionResult"/> containing a collection of employee family records. 
+        /// Returns an HTTP 200 status code with the list of records if successful.
+        /// </returns>
+        [HttpGet("GetAllEmployeeFamilyDetails")]
+        public async Task<IActionResult> GetAllEmployeeFamilyDetails()
+        {
+            var result = await _employeeFamilyService.GetAllAsync();
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Retrieves an employee family record by its unique identifier.
+        /// </summary>
+        /// <param name="id">The unique identifier of the employee family record to retrieve.</param>
+        /// <returns>
+        /// An <see cref="IActionResult"/> containing the employee family data if found; 
+        /// otherwise, a <see cref="NotFoundResult"/> if the record does not exist.
+        /// </returns>
+        [HttpGet("GetEmployeeFamilyDetailById/{id}")]
+        public async Task<IActionResult> GetEmployeeFamilyDetailById(int id)
+        {
+            var record = await _employeeFamilyService.GetByIdAsync(id);
+            if (record == null)
+                return NotFound();
+            return Ok(record);
+        }
+
+        /// <summary>
+        /// Creates a new employee family record.
+        /// </summary>
+        /// <param name="model">The data transfer object containing the details of the employee family record to create.</param>
+        /// <returns>
+        /// A <see cref="CreatedAtActionResult"/> containing the details of the created record.
+        /// </returns>
+        [HttpPost("CreateEmployeeFamilyDetail")]
+        public async Task<IActionResult> CreateEmployeeFamilyDetail([FromBody] EmployeeFamilyDetail model)
+        {
+            var result = await _employeeFamilyService.AddAsync(model);
+            return CreatedAtAction(nameof(GetEmployeeFamilyDetailById), new { id = result.FamilyId }, result);
+        }
+
+        /// <summary>
+        /// Updates an existing employee family record.
+        /// </summary>
+        /// <param name="id">The unique identifier of the record to update.</param>
+        /// <param name="model">The updated employee family details.</param>
+        /// <returns>
+        /// An <see cref="IActionResult"/> containing the updated record details if successful; 
+        /// otherwise, a <see cref="BadRequestResult"/> if the IDs do not match.
+        /// </returns>
+        [HttpPut("UpdateEmployeeFamilyDetail/{id}")]
+        public async Task<IActionResult> UpdateEmployeeFamilyDetail(int id, [FromBody] EmployeeFamilyDetail model)
+        {
+            if (id != model.FamilyId)
+                return BadRequest("Family ID mismatch.");
+
+            var result = await _employeeFamilyService.UpdateAsync(model);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Deletes an employee family record by its unique identifier.
+        /// </summary>
+        /// <param name="id">The unique identifier of the record to delete.</param>
+        /// <returns>
+        /// Returns an HTTP 204 (No Content) status if successful; otherwise, HTTP 404 (Not Found).
+        /// </returns>
+        [HttpDelete("DeleteEmployeeFamilyDetail/{id}")]
+        public async Task<IActionResult> DeleteEmployeeFamilyDetail(int id)
+        {
+            var deleted = await _employeeFamilyService.DeleteAsync(id);
+            if (!deleted)
+                return NotFound();
+            return NoContent();
+        }
+
+        #endregion
+
+        #region Employee Emergency Contact Details
+
+        /// <summary>
+        /// Retrieves all employee emergency contact records.
+        /// </summary>
+        [HttpGet("GetAllEmployeeEmergencyContacts")]
+        public async Task<IActionResult> GetAllEmployeeEmergencyContacts()
+        {
+            var contacts = await _emergencyContactService.GetAllAsync();
+            return Ok(contacts);
+        }
+
+        /// <summary>
+        /// Retrieves a specific emergency contact by its ID.
+        /// </summary>
+        [HttpGet("GetEmployeeEmergencyContactById/{id:int}")]
+        public async Task<IActionResult> GetEmployeeEmergencyContactById(int id)
+        {
+            var contact = await _emergencyContactService.GetByIdAsync(id);
+            if (contact == null)
+                return NotFound(new { Message = "Emergency contact not found." });
+
+            return Ok(contact);
+        }
+
+        /// <summary>
+        /// Retrieves emergency contacts by Employee ID.
+        /// </summary>
+        [HttpGet("GetEmergencyContactsByEmployeeId/{employeeId:int}")]
+        public async Task<IActionResult> GetEmergencyContactsByEmployeeId(int employeeId)
+        {
+            var contacts = await _emergencyContactService.GetByEmployeeIdAsync(employeeId);
+            return Ok(contacts);
+        }
+
+        /// <summary>
+        /// Creates a new employee emergency contact record.
+        /// </summary>
+        [HttpPost("CreateEmployeeEmergencyContact")]
+        public async Task<IActionResult> CreateEmployeeEmergencyContact([FromBody] EmployeeEmergencyContactDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _emergencyContactService.AddAsync(model);
+            return CreatedAtAction(nameof(GetEmployeeEmergencyContactById), new { id = result.EmergencyContactId }, result);
+        }
+
+        /// <summary>
+        /// Updates an existing employee emergency contact record.
+        /// </summary>
+        [HttpPut("UpdateEmployeeEmergencyContact/{id:int}")]
+        public async Task<IActionResult> UpdateEmployeeEmergencyContact(int id, [FromBody] EmployeeEmergencyContactDTO model)
+        {
+            if (id != model.EmergencyContactId)
+                return BadRequest(new { Message = "EmergencyContactId mismatch." });
+
+            try
+            {
+                var updated = await _emergencyContactService.UpdateAsync(model);
+                return Ok(updated);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Deletes an employee emergency contact record by ID.
+        /// </summary>
+        [HttpDelete("DeleteEmployeeEmergencyContact/{id:int}")]
+        public async Task<IActionResult> DeleteEmployeeEmergencyContact(int id)
+        {
+            var deleted = await _emergencyContactService.DeleteAsync(id);
+            if (!deleted)
+                return NotFound(new { Message = "Emergency contact not found." });
+
+            return NoContent();
+        }
+
+        #endregion
+
+        #region Employee Immigration
+
+        /// <summary>
+        /// Retrieves a list of all employee immigration records.
+        /// </summary>
+        /// <remarks>
+        /// This method performs an asynchronous operation to fetch all employee immigration records
+        /// from the data source.
+        /// </remarks>
+        /// <returns>
+        /// An <see cref="IActionResult"/> containing a collection of employee immigration records.
+        /// Returns an HTTP 200 status code with the list of records if successful.
+        /// </returns>
+        [HttpGet("GetAllEmployeeImmigrations")]
+        public async Task<IActionResult> GetAllEmployeeImmigrations()
+        {
+            var result = await _employeeImmigrationService.GetAllAsync();
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Retrieves an employee immigration record by its unique identifier.
+        /// </summary>
+        /// <param name="id">The unique identifier of the employee immigration record to retrieve.</param>
+        /// <returns>
+        /// An <see cref="IActionResult"/> containing the employee immigration data if found;
+        /// otherwise, a <see cref="NotFoundResult"/> if the record does not exist.
+        /// </returns>
+        [HttpGet("GetEmployeeImmigrationById/{id}")]
+        public async Task<IActionResult> GetEmployeeImmigrationById(int id)
+        {
+            var record = await _employeeImmigrationService.GetByIdAsync(id);
+            if (record == null)
+                return NotFound();
+            return Ok(record);
+        }
+
+        /// <summary>
+        /// Creates a new employee immigration record.
+        /// </summary>
+        /// <param name="model">The data transfer object containing the details of the employee immigration record to create.</param>
+        /// <returns>
+        /// A <see cref="CreatedAtActionResult"/> containing the details of the created record.
+        /// </returns>
+        [HttpPost("CreateEmployeeImmigration")]
+        public async Task<IActionResult> CreateEmployeeImmigration([FromBody] EmployeeImmigration model)
+        {
+            var result = await _employeeImmigrationService.CreateAsync(model);
+            return CreatedAtAction(nameof(GetEmployeeImmigrationById), new { id = result.ImmigrationId }, result);
+        }
+
+        /// <summary>
+        /// Updates an existing employee immigration record.
+        /// </summary>
+        /// <param name="id">The unique identifier of the record to update.</param>
+        /// <param name="model">The updated employee immigration details.</param>
+        /// <returns>
+        /// An <see cref="IActionResult"/> containing the updated record details if successful;
+        /// otherwise, a <see cref="BadRequestResult"/> if the IDs do not match.
+        /// </returns>
+        [HttpPut("UpdateEmployeeImmigration/{id}")]
+        public async Task<IActionResult> UpdateEmployeeImmigration(int id, [FromBody] EmployeeImmigration model)
+        {
+            if (id != model.ImmigrationId)
+                return BadRequest("Immigration ID mismatch.");
+
+            var result = await _employeeImmigrationService.UpdateAsync(model);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Deletes an employee immigration record by its unique identifier.
+        /// </summary>
+        /// <param name="id">The unique identifier of the record to delete.</param>
+        /// <returns>
+        /// Returns an HTTP 204 (No Content) status if successful; otherwise, HTTP 404 (Not Found).
+        /// </returns>
+        [HttpDelete("DeleteEmployeeImmigration/{id}")]
+        public async Task<IActionResult> DeleteEmployeeImmigration(int id)
+        {
+            var deleted = await _employeeImmigrationService.DeleteAsync(id);
+            if (!deleted)
+                return NotFound();
+            return NoContent();
+        }
+
+        #endregion
     }
 }
+
