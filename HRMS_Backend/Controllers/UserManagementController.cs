@@ -17,16 +17,29 @@ namespace HRMS_Backend.Controllers
         private readonly IMenuMasterService _menuService;
         private readonly IRoleMasterService _roleService;
         private readonly IMenuRoleService _menuRoleService;
+
         private readonly IEmployeeReferenceService _employeeReferenceService;
+
         private readonly IEmployeeFormService _employeeFormService;
         private readonly IWebHostEnvironment _env;
-        private readonly ILeaveTypeService _leaveTypeService;
+       
 
 
 
         public UserManagementController(ICompanyService companyService, IRegionService regionService, IUserService userService
             , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService, IEmployeeReferenceService employeeReferenceService
-            , IEmployeeFormService employeeFormService, IWebHostEnvironment env, ILeaveTypeService leaveTypeService)
+            , IEmployeeFormService employeeFormService, IWebHostEnvironment env)
+
+    
+        private readonly IEmployeeEducationService _employeeEducationService;
+        private readonly IEmployeeCertificationService _employeeCertificationService;
+        private readonly IEmployeeDocumentService _employeeDocumentService;
+        private readonly IWebHostEnvironment _env;
+
+        public UserManagementController(ICompanyService companyService, IRegionService regionService, IUserService userService
+            , IMenuMasterService menuService, IRoleMasterService roleService, IMenuRoleService menuRoleService, IEmployeeEducationService employeeEducationService, IEmployeeCertificationService employeeCertificationService, IEmployeeDocumentService employeeDocumentService, IWebHostEnvironment env,IEmployeeReferenceService employeeReferenceService)
+
+
         {
             _companyService = companyService;
             _regionService = regionService;
@@ -34,10 +47,21 @@ namespace HRMS_Backend.Controllers
             _menuService = menuService;
             _roleService = roleService;
             _menuRoleService = menuRoleService;
+
             _employeeReferenceService = employeeReferenceService;
+
             _employeeFormService = employeeFormService;
             _env = env;
             _leaveTypeService = leaveTypeService;
+
+
+            _employeeEducationService = employeeEducationService;
+
+            _employeeCertificationService = employeeCertificationService;
+            _employeeDocumentService = employeeDocumentService;
+            _env = env;
+
+
 
         }
         #region Company Details
@@ -665,6 +689,418 @@ namespace HRMS_Backend.Controllers
         #endregion
 
        
+
+
+
+        #region Employee Education
+
+        /// <summary>
+        /// Get all education records for a specific employee
+        /// </summary>
+        [HttpGet("employee/{employeeId}/education")]
+        public async Task<IActionResult> GetEmployeeEducations(int employeeId)
+        {
+            if (employeeId <= 0)
+                return BadRequest(new { message = "Invalid employeeId" });
+
+            var data = await _employeeEducationService.GetByEmployeeIdAsync(employeeId);
+
+            if (data == null || !data.Any())
+                return NotFound(new { message = "No education records found for this employee" });
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// Get employee education by EducationId
+        /// </summary>
+        [HttpGet("education/{id}")]
+        public async Task<IActionResult> GetEmployeeEducationById(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid education id" });
+
+            var data = await _employeeEducationService.GetByIdAsync(id);
+
+            if (data == null)
+                return NotFound(new { message = "Education record not found" });
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// Add new employee education
+        /// </summary>
+        [HttpPost("education")]
+        public async Task<IActionResult> SaveEmployeeEducation([FromForm] EmployeeEducationDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Handle optional certificate file upload
+            string webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            string uploadFolder = Path.Combine(webRootPath, "Uploads", "EducationCertificates");
+
+            if (!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            if (model.CertificateFile != null && model.CertificateFile.Length > 0)
+            {
+                string fileName = $"{Guid.NewGuid()}_{model.CertificateFile.FileName}";
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.CertificateFile.CopyToAsync(stream);
+                }
+
+                model.CertificateFilePath = Path.Combine("Uploads", "EducationCertificates", fileName)
+                    .Replace("\\", "/");
+            }
+
+            model.CreatedBy = 0;
+
+            var newId = await _employeeEducationService.AddAsync(model);
+
+            return CreatedAtAction(nameof(GetEmployeeEducationById), new { id = newId },
+                new { message = "Saved successfully", id = newId });
+        }
+
+        /// <summary>
+        /// Update employee education
+        /// </summary>
+        [HttpPut("education/{id}")]
+        public async Task<IActionResult> UpdateEmployeeEducation(int id, [FromForm] EmployeeEducationDto model)
+        {
+            if (id != model.EducationId)
+                return BadRequest("ID mismatch");
+
+            // File update logic
+            string webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            string uploadFolder = Path.Combine(webRootPath, "Uploads", "EducationCertificates");
+
+            if (!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            if (model.CertificateFile != null && model.CertificateFile.Length > 0)
+            {
+                string fileName = $"{Guid.NewGuid()}_{model.CertificateFile.FileName}";
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.CertificateFile.CopyToAsync(stream);
+                }
+
+                model.CertificateFilePath = Path.Combine("Uploads", "EducationCertificates", fileName)
+                    .Replace("\\", "/");
+            }
+
+            model.ModifiedBy ??= 0;
+
+            var result = await _employeeEducationService.UpdateAsync(model);
+
+            if (!result)
+                return NotFound("Education record not found");
+
+            return Ok(new { message = "Updated successfully" });
+        }
+
+        /// <summary>
+        /// Delete employee education
+        /// </summary>
+        [HttpDelete("education/{id}")]
+        public async Task<IActionResult> DeleteEmployeeEducation(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid id" });
+
+            var result = await _employeeEducationService.DeleteAsync(id);
+
+            if (!result)
+                return NotFound(new { message = "Record not found or already deleted" });
+
+            return Ok(new { message = "Deleted successfully" });
+        }
+        // Mode Of Study Dropdown
+
+        [HttpGet("employeeeducation/modeofstudy")]
+        public async Task<IActionResult> GetModeOfStudyList()
+        {
+            var result = await _employeeEducationService.GetModeOfStudyListAsync();
+
+            if (result == null || !result.Any())
+                return NotFound(new { message = "No active mode of study found" });
+
+            return Ok(result);
+        }
+
+
+        #endregion
+
+        #region Employee Certification
+
+        /// <summary>
+        /// Get all certification records for a specific employee
+        /// </summary>
+        [HttpGet("employee/{employeeId}/certifications")]
+        public async Task<IActionResult> GetEmployeeCertifications(int employeeId)
+        {
+            if (employeeId <= 0)
+                return BadRequest(new { message = "Invalid employeeId" });
+
+            var data = await _employeeCertificationService.GetEmployeeCertificationsAsync(employeeId);
+
+            if (data == null || !data.Any())
+                return NotFound(new { message = "No certification records found for this employee" });
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// Get employee certification by CertificationId
+        /// </summary>
+        [HttpGet("certification/{id}")]
+        public async Task<IActionResult> GetCertificationById(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid certification id" });
+
+            var data = await _employeeCertificationService.GetCertificationByIdAsync(id);
+
+            if (data == null)
+                return NotFound(new { message = "Certification record not found" });
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// Add new employee certification (with file upload)
+        /// </summary>
+        [HttpPost("certification")]
+        public async Task<IActionResult> SaveEmployeeCertification([FromForm] EmployeeCertificationDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            string webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            string uploadFolder = Path.Combine(webRootPath, "Uploads", "Certifications");
+
+            if (!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            if (model.DocumentFile != null && model.DocumentFile.Length > 0)
+            {
+                string fileName = $"{Guid.NewGuid()}_{model.DocumentFile.FileName}";
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.DocumentFile.CopyToAsync(stream);
+                }
+
+                model.DocumentPath = Path.Combine("Uploads", "Certifications", fileName).Replace("\\", "/");
+            }
+
+            model.CreatedBy ??= 0; // ✅ fix for int?
+            model.CreatedDate = DateTime.Now;
+
+            var newId = await _employeeCertificationService.CreateCertificationAsync(model);
+
+            return CreatedAtAction(nameof(GetCertificationById), new { id = newId },
+                new { message = "Saved successfully", id = newId });
+        }
+
+        /// <summary>
+        /// Update employee certification (with file upload)
+        /// </summary>
+        [HttpPut("certification/{id}")]
+        public async Task<IActionResult> UpdateEmployeeCertification(int id, [FromForm] EmployeeCertificationDto model)
+        {
+            if (id != model.CertificationId)
+                return BadRequest("ID mismatch");
+
+            string webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            string uploadFolder = Path.Combine(webRootPath, "Uploads", "Certifications");
+
+            if (!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            if (model.DocumentFile != null && model.DocumentFile.Length > 0)
+            {
+                string fileName = $"{Guid.NewGuid()}_{model.DocumentFile.FileName}";
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.DocumentFile.CopyToAsync(stream);
+                }
+
+                model.DocumentPath = Path.Combine("Uploads", "Certifications", fileName).Replace("\\", "/");
+            }
+
+            model.ModifiedBy ??= 0; // ✅ fix
+
+            var result = await _employeeCertificationService.UpdateCertificationAsync(id, model);
+
+            if (!result)
+                return NotFound("Certification record not found");
+
+            return Ok(new { message = "Updated successfully" });
+        }
+
+        /// <summary>
+        /// Delete employee certification
+        /// </summary>
+        [HttpDelete("certification/{id}")]
+        public async Task<IActionResult> DeleteEmployeeCertification(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid id" });
+
+            var result = await _employeeCertificationService.DeleteCertificationAsync(id);
+
+            if (!result)
+                return NotFound(new { message = "Record not found or already deleted" });
+
+            return Ok(new { message = "Deleted successfully" });
+        }
+        /// <summary>
+        /// Get all certification types (e.g., Technical, Professional, Language)
+        /// </summary>
+        [HttpGet("certification/types")]
+        public async Task<IActionResult> GetCertificationTypes()
+        {
+            var types = await _employeeCertificationService.GetCertificationTypesAsync();
+
+            if (types == null || !types.Any())
+                return NotFound(new { message = "No certification types found" });
+
+            return Ok(types);
+        }
+
+
+        #endregion
+
+
+        #region Employee Documents
+
+        /// <summary>
+        /// Get all documents for an employee
+        /// </summary>
+        [HttpGet("employee/{employeeId}/documents")]
+        public async Task<IActionResult> GetAllDocumentsAsync(int employeeId)
+        {
+            var result = await _employeeDocumentService.GetDocumentsByEmployeeAsync(employeeId);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Get a specific document by ID
+        /// </summary>
+        [HttpGet("GetDocumentById/{id}")]
+        public async Task<IActionResult> GetDocumentByIdAsync(int id)
+        {
+            var result = await _employeeDocumentService.GetDocumentByIdAsync(id);
+            if (result == null)
+                return NotFound(new { message = "Document not found" });
+
+            return Ok(result);
+        }
+        [HttpPost("AddDocument")]
+        public async Task<IActionResult> AddDocumentAsync([FromForm] EmployeeDocumentDto dto)
+        {
+            if (dto == null)
+                return BadRequest(new { message = "Invalid data" });
+
+            // ✅ Safe path combine
+            string webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            string uploadFolder = Path.Combine(webRootPath, "Uploads", "EmployeeDocuments");
+
+            if (!Directory.Exists(uploadFolder))
+                Directory.CreateDirectory(uploadFolder);
+
+            string? relativePath = null;
+
+            if (dto.DocumentFile != null && dto.DocumentFile.Length > 0)
+            {
+                string fileName = $"{Guid.NewGuid()}_{dto.DocumentFile.FileName}";
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await dto.DocumentFile.CopyToAsync(stream);
+                }
+
+                relativePath = Path.Combine("Uploads", "EmployeeDocuments", fileName).Replace("\\", "/");
+            }
+
+            dto.FilePath = relativePath;
+            dto.CreatedBy ??= 0;
+
+            var documentId = await _employeeDocumentService.AddDocumentAsync(dto);
+            return Ok(new { message = "Document added successfully", documentId });
+        }
+
+        /// <summary>
+        /// Update an existing document
+        /// </summary>
+        [HttpPut("UpdateDocument/{id}")]
+        public async Task<IActionResult> UpdateDocumentAsync(int id, [FromForm] EmployeeDocumentDto dto)
+        {
+            if (dto == null)
+                return BadRequest(new { message = "Invalid data" });
+
+            dto.Id = id;
+
+            if (dto.DocumentFile != null && dto.DocumentFile.Length > 0)
+            {
+                string uploadFolder = Path.Combine(_env.WebRootPath, "Uploads", "EmployeeDocuments");
+                if (!Directory.Exists(uploadFolder))
+                    Directory.CreateDirectory(uploadFolder);
+
+                string fileName = $"{Guid.NewGuid()}_{dto.DocumentFile.FileName}";
+                string filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await dto.DocumentFile.CopyToAsync(stream);
+                }
+
+                dto.FilePath = Path.Combine("Uploads", "EmployeeDocuments", fileName).Replace("\\", "/");
+            }
+
+            // ✅ Apply numeric fallback
+            dto.ModifiedBy ??= 0;
+
+            var success = await _employeeDocumentService.UpdateDocumentAsync(dto);
+            if (!success)
+                return NotFound(new { message = "Document not found" });
+
+            return Ok(new { message = "Document updated successfully" });
+        }
+
+
+        /// <summary>
+        /// Delete a document by ID
+        /// </summary>
+        [HttpDelete("DeleteDocument/{id}")]
+        public async Task<IActionResult> DeleteDocumentAsync(int id)
+        {
+            var success = await _employeeDocumentService.DeleteDocumentAsync(id);
+            if (!success)
+                return NotFound(new { message = "Document not found" });
+
+            return Ok(new { message = "Document deleted successfully" });
+        }
+        [HttpGet("document/types")]
+        public async Task<IActionResult> GetAllDocumentTypesAsync()
+        {
+            var result = await _employeeDocumentService.GetAllDocumentTypesAsync();
+            return Ok(result);
+        }
+
+        #endregion
 
     }
 }
